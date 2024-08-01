@@ -1,0 +1,145 @@
+---
+title: "R Workshop"
+author: "Melissa Eckert"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#tidyverse contains many important packages for data science
+library(tidyverse)
+library(dplyr)
+library(janitor)
+
+glimpse(state.x77)
+```
+
+Using the built-in pipe operation
+
+The pipe operator, |>, can be read as “and then”.
+The pipe operator passes what comes before it into the function that comes after it as the first argument in that function.
+
+```{r}
+#convert matrix into data frame
+state_data<- state.x77 |>
+  as.data.frame() |>
+  #create column for state
+  rownames_to_column(var = "State") |>
+  #clean names
+clean_names()
+
+
+## Common dplyr functions
+
+state_data|>
+  #select or deselect columns 
+  select ( - frost, -area) |>
+#filter rows based on certain criteria
+  filter( income > 5000) |>
+#round life expectancy to one digit
+  mutate( life_exp = round(life_exp, 1) )
+
+#calculate actual population numbers
+state_data<- state_data |>
+  mutate( population = population * 1000)
+
+#join data frame with the 'state region' vector
+state_region<- data.frame(state = state.name, region = state.region)
+
+state_join<- state_region |>
+  inner_join( state_data, by = "state")
+state_join
+
+#calculate number of states per region
+
+state_join |>
+  group_by(region)|>
+  #summarise each group down to one row 
+  summarise(num_states = n())
+
+#boxplot of population by region
+state_join |>
+  ggplot(aes(x = region, y = population, fill = region)) +
+  geom_boxplot() + 
+  labs( title = "US population by Region in 1975", 
+        x = "Region", y = "Population")
+    #scale is too large, it is hard to see the mean 
+
+state_join |>
+  ggplot(aes(x = region, y = population, fill = region)) +
+  geom_boxplot() +
+   labs( title = "US population by Region in 1975", 
+        x = "Region", y = "Population") +
+  scale_y_continuous(trans = "log2") +
+  theme_minimal() +
+  #change color scale 
+  scale_fill_viridis_d() +
+  #remove legend
+  theme(legend.position = "none") 
+
+
+#plot illiteracy level vs high school graduation rate 
+state_join |>
+  ggplot(aes(x = illiteracy, y = hs_grad, color = region)) +
+  geom_point() +
+  scale_color_manual(values = rainbow(4)) + 
+  theme_minimal() +
+  scale_x_continuous( label = label_percent(scale = 1)) +
+  scale_y_continuous( label = label_percent(scale = 1)) +
+  labs( title = "HS Graduation Rate vs Illiteracy Rate",
+        subtitle = "In the US during the 1970s",
+        x = "Illiteracy Rate", y = "HS Graduation Rate", color = "Region" )
+
+#using facet wrap
+
+state_join |>
+  ggplot(aes(x = illiteracy, y = hs_grad, color = region)) +
+  geom_point() +
+  scale_color_manual(values = rainbow(4)) + 
+  theme_minimal() +
+  scale_x_continuous( label = label_percent(scale = 1)) +
+  scale_y_continuous( label = label_percent(scale = 1)) +
+  labs( title = "HS Graduation Rate vs Illiteracy Rate",
+        subtitle = "In the US during the 1970s",
+        x = "Illiteracy Rate", y = "HS Graduation Rate", color = "Region" )+
+  facet_wrap(~region) +
+  theme(legend.position = "none" )
+
+#correlation between illiteracy rate and graduation rate 
+state_join |>
+  summarise(R = cor(illiteracy, hs_grad))
+
+
+```
+
+
+Debugging
+```{r}
+state.region<- as.vector(unique(state.region))
+for(i in seq_along(state.region)){
+  current_region<- state.region[i]
+  region_data<- state_join |>
+    filter(region == current_region)
+  
+    print(ggplot(region_data,aes(x = illiteracy, y = hs_grad)) +
+    geom_point() + 
+      labs( title = current_region))
+}
+
+
+#identical() checks if two objects are exactly the same
+#all.equal() checks if two objects are nearly equal
+
+x<-c(0,1,2,3)
+x2<-c(0,1,2,3)
+y<-c(0.00001, 1.0001, 2.0001, 3.0002)
+identical(x,y)
+all.equal(x,y)
+
+##read documentation!!!
+```
+
+
+
