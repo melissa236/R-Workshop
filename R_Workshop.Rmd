@@ -41,6 +41,14 @@ state_data|>
 #round life expectancy to one digit
   mutate( life_exp = round(life_exp, 1) )
 
+#reshape data using pivot_longer
+state_data |>
+  select(state, population, income, area) |>
+  pivot_longer(
+    cols = c(population, income,area),
+    names_to = "Variable",
+    values_to = "Value"
+  )
 #calculate actual population numbers
 state_data<- state_data |>
   mutate( population = population * 1000)
